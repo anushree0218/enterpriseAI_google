@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuSmart - Intelligent Document Processing</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .app-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #3367d6;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .drop-zone {
+            height: 200px;
+            border: 2px dashed #3367d6;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+            background-color: #f0f4ff;
+            transition: all 0.3s;
+        }
+        .drop-zone:hover {
+            background-color: #e0e8ff;
+        }
+        .drop-zone.active {
+            border-color: #28a745;
+            background-color: #e3f5ec;
+        }
+        .drop-zone p {
+            margin: 10px 0 0 0;
+        }
+        .processing-card {
+            margin-top: 20px;
+            display: none;
+        }
+        .result-container {
+            margin-top: 20px;
+            display: none;
+        }
+        .document-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: white;
+        }
+        .extracted-data {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            vertical-align: text-bottom;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner 0.75s linear infinite;
+        }
+        @keyframes spinner {
+            to {transform: rotate(360deg);}
+        }
+        .stats-card {
+            background-color: white;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .workflow-container {
+            margin-top: 30px;
+        }
+        .feature-card {
+            transition: transform 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .action-btn {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header text-center">
+            <h1><i class="bi bi-file-earmark-text"></i> DocuSmart</h1>
+            <p class="lead mb-0">Intelligent Document Processing Automation</p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card text-center">
+                    <h3 class="text-primary">85%</h3>
+                    <p class="text-muted mb-0">Time Saved</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card text-center">
+                    <h3 class="text-success">99%</h3>
+                    <p class="text-muted mb-0">Accuracy</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card text-center">
+                    <h3 class="text-info">24/7</h3>
+                    <p class="text-muted mb-0">Processing</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Upload Document</h5>
+                <p class="card-text">Upload your invoice, receipt, or business document for automated processing.</p>
+                
+                <div id="drop-zone" class="drop-zone">
+                    <i class="bi bi-cloud-upload fs-1"></i>
+                    <p>Drag & Drop files here or click to browse</p>
+                    <input type="file" id="file-input" hidden accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx">
+                </div>
+
+                <div class="mt-3 d-flex justify-content-between">
+                    <div>
+                        <button class="btn btn-outline-secondary action-btn" id="sample-btn">
+                            <i class="bi bi-file-earmark"></i> Use Sample
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" id="process-btn" disabled>
+                            <i class="bi bi-lightning"></i> Process Document
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="processing-card" class="card processing-card">
+            <div class="card-body text-center">
+                <div class="loading-spinner mb-3"></div>
+                <h5 id="processing-status">Processing document...</h5>
+                <div class="progress mt-3">
+                    <div id="processing-progress" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="result-container" class="result-container">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header">Document Preview</div>
+                        <div class="card-body">
+                            <div id="document-preview" class="document-preview">
+                                <!-- Document preview will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Extracted Data</div>
+                        <div class="card-body">
+                            <div id="extracted-data" class="extracted-data">
+                                <!-- Extracted data will be shown here -->
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-success action-btn" id="approve-btn">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </button>
+                                <button class="btn btn-outline-primary action-btn" id="edit-btn">
+                                    <i class="bi bi-pencil"></i> Edit Data
+                                </button>
+                                <button class="btn btn-outline-secondary action-btn" id="export-btn">
+                                    <i class="bi bi-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workflow-container">
+                <h5>What's Next?</h5>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card feature-card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-database fs-1 text-primary mb-3"></i>
+                                <h5>Save to Database</h5>
+                                <p class="card-text">Store extracted information in your business systems.</p>
+                                <button class="btn btn-sm btn-outline-primary">Connect Database</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card feature-card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-robot fs-1 text-success mb-3"></i>
+                                <h5>Trigger Workflow</h5>
+                                <p class="card-text">Automatically initiate approval or payment processes.</p>
+                                <button class="btn btn-sm btn-outline-success">Set Up Workflow</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card feature-card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-graph-up fs-1 text-info mb-3"></i>
+                                <h5>Generate Reports</h5>
+                                <p class="card-text">Create custom analysis from processed documents.</p>
+                                <button class="btn btn-sm btn-outline-info">View Reports</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const processBtn = document.getElementById('process-btn');
+            const sampleBtn = document.getElementById('sample-btn');
+            const processingCard = document.getElementById('processing-card');
+            const processingProgress = document.getElementById('processing-progress');
+            const resultContainer = document.getElementById('result-container');
+            const documentPreview = document.getElementById('document-preview');
+            const extractedData = document.getElementById('extracted-data');
+            const approveBtn = document.getElementById('approve-btn');
+            const editBtn = document.getElementById('edit-btn');
+            const exportBtn = document.getElementById('export-btn');
+            
+            let selectedFile = null;
+            
+            // Sample invoice data for demonstration
+            const sampleInvoiceData = {
+                invoiceNumber: "INV-2025-0042",
+                date: "2025-02-18",
+                dueDate: "2025-03-20",
+                vendor: {
+                    name: "TechSupplies Inc.",
+                    address: "123 Business Ave, Seattle, WA 98101",
+                    phone: "(206) 555-1234",
+                    email: "billing@techsupplies.example"
+                },
+                customer: {
+                    name: "Acme Corporation",
+                    address: "789 Enterprise St, Chicago, IL 60601",
+                    accountNumber: "ACME-2023-001"
+                },
+                items: [
+                    { description: "Premium Office Supplies Bundle", quantity: 5, unitPrice: 149.99, amount: 749.95 },
+                    { description: "Enterprise Software License (Annual)", quantity: 1, unitPrice: 1299.00, amount: 1299.00 },
+                    { description: "Technical Support Package", quantity: 2, unitPrice: 499.50, amount: 999.00 }
+                ],
+                subtotal: 3047.95,
+                tax: 228.60,
+                total: 3276.55,
+                paymentTerms: "Net 30",
+                notes: "Thank you for your business!"
+            };
+            
+            // Sample invoice HTML for preview
+            const sampleInvoiceHTML = `
+                <div style="font-family: Arial, sans-serif;">
+                    <div style="text-align: right; margin-bottom: 20px;">
+                        <h2 style="color: #3367d6;">INVOICE</h2>
+                        <p><strong>Invoice #:</strong> INV-2025-0042</p>
+                        <p><strong>Date:</strong> February 18, 2025</p>
+                        <p><strong>Due Date:</strong> March 20, 2025</p>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <div>
+                            <p><strong>From:</strong></p>
+                            <p>TechSupplies Inc.<br>
+                            123 Business Ave<br>
+                            Seattle, WA 98101<br>
+                            (206) 555-1234<br>
+                            billing@techsupplies.example</p>
+                        </div>
+                        <div>
+                            <p><strong>To:</strong></p>
+                            <p>Acme Corporation<br>
+                            789 Enterprise St<br>
+                            Chicago, IL 60601<br>
+                            Account: ACME-2023-001</p>
+                        </div>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                        <thead>
+                            <tr style="background-color: #f0f0f0;">
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Description</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Qty</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Unit Price</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">Premium Office Supplies Bundle</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">5</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$149.99</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$749.95</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">Enterprise Software License (Annual)</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">1</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$1,299.00</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$1,299.00</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">Technical Support Package</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">2</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$499.50</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$999.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div style="text-align: right; margin-bottom: 20px;">
+                        <p><strong>Subtotal:</strong> $3,047.95</p>
+                        <p><strong>Tax (7.5%):</strong> $228.60</p>
+                        <p style="font-size: 1.2em;"><strong>Total:</strong> $3,276.55</p>
+                    </div>
+                    
+                    <div style="margin-top: 30px;">
+                        <p><strong>Payment Terms:</strong> Net 30</p>
+                        <p><strong>Notes:</strong> Thank you for your business!</p>
+                    </div>
+                </div>
+            `;
+            
+            // Display extracted data in a nice format
+            function displayExtractedData(data) {
+                let html = `
+                    <div class="mb-3">
+                        <h6>Basic Information</h6>
+                        <div class="row">
+                            <div class="col-6"><strong>Invoice Number:</strong> ${data.invoiceNumber}</div>
+                            <div class="col-6"><strong>Date:</strong> ${data.date}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Due Date:</strong> ${data.dueDate}</div>
+                            <div class="col-6"><strong>Payment Terms:</strong> ${data.paymentTerms}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-6">
+                                <h6>Vendor</h6>
+                                <p>
+                                    ${data.vendor.name}<br>
+                                    ${data.vendor.address}<br>
+                                    ${data.vendor.phone}<br>
+                                    ${data.vendor.email}
+                                </p>
+                            </div>
+                            <div class="col-6">
+                                <h6>Customer</h6>
+                                <p>
+                                    ${data.customer.name}<br>
+                                    ${data.customer.address}<br>
+                                    Account: ${data.customer.accountNumber}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Items</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.items.forEach(item => {
+                    html += `
+                        <tr>
+                            <td>${item.description}</td>
+                            <td class="text-end">${item.quantity}</td>
+                            <td class="text-end">$${item.unitPrice.toFixed(2)}</td>
+                            <td class="text-end">$${item.amount.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="text-end">
+                        <div><strong>Subtotal:</strong> $${data.subtotal.toFixed(2)}</div>
+                        <div><strong>Tax:</strong> $${data.tax.toFixed(2)}</div>
+                        <div class="fs-5"><strong>Total:</strong> $${data.total.toFixed(2)}</div>
+                    </div>
+                `;
+                
+                return html;
+            }
+            
+            // Simulate document processing with Google API
+            function processDocument() {
+                processingCard.style.display = 'block';
+                resultContainer.style.display = 'none';
+                
+                // Simulate progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    processingProgress.style.width = `${progress}%`;
+                    
+                    if (progress === 25) {
+                        document.getElementById('processing-status').textContent = 'Analyzing document structure...';
+                    } else if (progress === 50) {
+                        document.getElementById('processing-status').textContent = 'Extracting text and data...';
+                    } else if (progress === 75) {
+                        document.getElementById('processing-status').textContent = 'Validating extracted information...';
+                    }
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            processingCard.style.display = 'none';
+                            resultContainer.style.display = 'block';
+                            
+                            // Display sample data
+                            documentPreview.innerHTML = sampleInvoiceHTML;
+                            extractedData.innerHTML = displayExtractedData(sampleInvoiceData);
+                        }, 500);
+                    }
+                }, 100);
+            }
+            
+            // Handle file selection
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    selectedFile = e.target.files[0];
+                    dropZone.classList.add('active');
+                    dropZone.innerHTML = `
+                        <i class="bi bi-file-earmark-check fs-1"></i>
+                        <p>${selectedFile.name}</p>
+                    `;
+                    processBtn.disabled = false;
+                }
+            });
+            
+            // Handle drag and drop
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.classList.add('active');
+            });
+            
+            dropZone.addEventListener('dragleave', function() {
+                if (!selectedFile) {
+                    dropZone.classList.remove('active');
+                }
+            });
+            
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (e.dataTransfer.files.length > 0) {
+                    selectedFile = e.dataTransfer.files[0];
+                    dropZone.innerHTML = `
+                        <i class="bi bi-file-earmark-check fs-1"></i>
+                        <p>${selectedFile.name}</p>
+                    `;
+                    processBtn.disabled = false;
+                }
+            });
+            
+            // Open file browser when clicking on drop zone
+            dropZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Process document
+            processBtn.addEventListener('click', processDocument);
+            
+            // Use sample document
+            sampleBtn.addEventListener('click', function() {
+                selectedFile = 'sample.pdf';
+                dropZone.classList.add('active');
+                dropZone.innerHTML = `
+                    <i class="bi bi-file-earmark-check fs-1"></i>
+                    <p>sample-invoice.pdf</p>
+                `;
+                processBtn.disabled = false;
+            });
+            
+            // Buttons in results section
+            approveBtn.addEventListener('click', function() {
+                alert('Document processed and data approved!');
+            });
+            
+            editBtn.addEventListener('click', function() {
+                alert('Edit mode would open here in a real application');
+            });
+            
+            exportBtn.addEventListener('click', function() {
+                alert('Data exported successfully!');
+            });
+        });
+    </script>
+</body>
+</html>
