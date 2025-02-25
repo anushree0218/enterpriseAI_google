@@ -73,8 +73,8 @@ For an accounting firm processing **200 invoices per week**:
 This prototype provides a simple user interface to test document processing features.
 1. **Clone the Repository:**  
    ```bash
-   git clone https://github.com/yourrepo/docusmart.git
-   cd docusmart
+   git clone https://github.com/anushree0218/enterpriseAI_google
+   
    ```
 2. **Navigate to Prototype Folder:**  
    ```bash
